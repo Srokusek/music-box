@@ -6,7 +6,8 @@ LedControl lc=LedControl(12,10,11,1);
 #define NEXT_PIN 4
 #define PREV_PIN 5
 #define SAVE_PIN 2
-#define TONE_PIN 3 
+#define TONE_PIN 9
+#define PLAY_PIN 3
 
 byte last_nextBtn, last_prevBtn = HIGH;
 
@@ -76,20 +77,27 @@ void select() {
   else {
         selected = 1;
       }
-      Serial.println(selected); 
+  Serial.println("selected"); 
+}
+
+void playStart() {
+  playing =  1;
+  Serial.println("started");
 }
 
 void setup() {
-  // put your setup code here, to run once:
+  // put your setup code here, to run once:1
   lc.shutdown(0, false);
   lc.setIntensity(0, 10);
   lc.clearDisplay(0);
 
-  pinMode(4, INPUT_PULLUP);
-  pinMode(5, INPUT_PULLUP);
-  pinMode(2, INPUT_PULLUP);
-  pinMode(3, OUTPUT);
-  attachInterrupt(0, select, FALLING);
+  pinMode(PREV_PIN, INPUT_PULLUP);
+  pinMode(NEXT_PIN, INPUT_PULLUP);
+  pinMode(SAVE_PIN, INPUT_PULLUP);
+  pinMode(PLAY_PIN, INPUT_PULLUP);
+  pinMode(TONE_PIN, OUTPUT);
+  attachInterrupt(digitalPinToInterrupt(SAVE_PIN), select, FALLING);
+  attachInterrupt(digitalPinToInterrupt(PLAY_PIN), playStart, FALLING);
 
   Serial.begin(115200);
   numToLed(numMatrix, ledMatrix);
@@ -103,7 +111,18 @@ void showDisplay(byte ledMatrix[8]) {
 }
 
 void play() {
-
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+    {
+      if (timeMatrix[i][j] != 0) {
+        tone(TONE_PIN, freqMatrix[i][j]);
+        delay(timeMatrix[i][j]);
+      }
+    }
+  }
+  playing = 0;
+  noTone(TONE_PIN);
 }
 
 void loop() {
@@ -146,15 +165,17 @@ void loop() {
 
     if (selected == 1) {
       freqMatrix[row][col] = map(analogRead(A0), 0, 1023, 2000, 50);
-      timeMatrix[row][col] = map(analogRead(A1), 0, 1023, 5000, 50);
+      timeMatrix[row][col] = map(analogRead(A1), 0, 1023, 1000, 10);
     }
     
-    if (freqMatrix[row][col] != 0)
+    if (freqMatrix[row][col] != 0 && playing == 0)
     {
       tone(TONE_PIN, freqMatrix[row][col], timeMatrix[row][col]);
     }
-    
-    
-    Serial.println(map(analogRead(A1), 0, 1023, 5000, 50));
+
+    if (playing == 1)
+    {
+      play();
+    }
 }
 
